@@ -1,6 +1,9 @@
 package jenkins.bouncycastle.api;
 
 import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.security.Provider;
 import java.security.Security;
 import java.util.logging.Level;
@@ -35,7 +38,7 @@ public class BouncyCastlePlugin extends Plugin {
     }
 
     @Override
-    @SuppressRestrictedWarnings(jenkins.util.AntClassLoader.class) // we are messing with the classloader and it has not changed in many many years
+    @SuppressRestrictedWarnings(jenkins.util.AntClassLoader.class) // we are messing with the classloader
     public void start() throws Exception {
         if (!isActive) {
             // Alternative BouncyCastle is installed do no not insert these libraries
@@ -60,11 +63,20 @@ public class BouncyCastlePlugin extends Plugin {
                 throw new IllegalStateException("BouncyCastle libs are missing from WEB-INF/optional-libs");
             }
         } else {
-            AntClassLoader cl = (AntClassLoader) this.getWrapper().classLoader;
+            ClassLoader cl = this.getWrapper().classLoader;
 
             for (File optionalLib : optionalLibs) {
                 LOG.log(Level.CONFIG, () -> "Inserting " + optionalLib + " into bouncycastle-api plugin classpath");
-                cl.addPathComponent(optionalLib);
+                if (cl instanceof AntClassLoader) {
+                    ((AntClassLoader) cl).addPathComponent(optionalLib);
+                } else if (cl instanceof URLClassLoader) {
+                    // TODO use URLClassLoader2 when core contains https://github.com/jenkinsci/jenkins/pull/5698
+                    Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
+                    addURL.setAccessible(true);
+                    addURL.invoke(cl, optionalLib.toURI().toURL());
+                } else {
+                    throw new IllegalStateException("Unexpected class loader: " + cl);
+                }
             }
         }
         SecurityProviderInitializer.addSecurityProvider();

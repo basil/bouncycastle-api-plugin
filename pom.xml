@@ -67,7 +67,7 @@
   <properties>
     <revision>2.25</revision>
     <changelist>-SNAPSHOT</changelist>
-    <jenkins.version>2.222.4</jenkins.version>
+    <jenkins.version>2.309-rc31448.cf7b4812bace</jenkins.version> <!-- TODO https://github.com/jenkinsci/jenkins/pull/5698 -->
     <java.level>8</java.level>
     <bouncycastleVersion>1.69</bouncycastleVersion>
   </properties>

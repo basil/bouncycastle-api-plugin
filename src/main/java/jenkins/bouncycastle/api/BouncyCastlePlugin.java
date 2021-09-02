@@ -18,6 +18,7 @@ import hudson.remoting.Which;
 import java.io.IOException;
 import jenkins.model.Jenkins;
 import jenkins.util.AntClassLoader;
+import jenkins.util.URLClassLoader2;
 
 @SuppressWarnings("deprecation") // there is no other way to achieve this at the correct lifecycle point
 @Restricted(NoExternalUse.class) // just for Jenkins access not part of the API
@@ -38,7 +39,7 @@ public class BouncyCastlePlugin extends Plugin {
     }
 
     @Override
-    @SuppressRestrictedWarnings(jenkins.util.AntClassLoader.class) // we are messing with the classloader
+    @SuppressRestrictedWarnings({jenkins.util.AntClassLoader.class, jenkins.util.URLClassLoader2.class}) // we are messing with the classloader
     public void start() throws Exception {
         if (!isActive) {
             // Alternative BouncyCastle is installed do no not insert these libraries
@@ -69,8 +70,9 @@ public class BouncyCastlePlugin extends Plugin {
                 LOG.log(Level.CONFIG, () -> "Inserting " + optionalLib + " into bouncycastle-api plugin classpath");
                 if (cl instanceof AntClassLoader) {
                     ((AntClassLoader) cl).addPathComponent(optionalLib);
+                } else if (cl instanceof URLClassLoader2) {
+                    ((URLClassLoader2) cl).addURL(optionalLib.toURI().toURL());
                 } else if (cl instanceof URLClassLoader) {
-                    // TODO use URLClassLoader2 when core contains https://github.com/jenkinsci/jenkins/pull/5698
                     Method addURL = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
                     addURL.setAccessible(true);
                     addURL.invoke(cl, optionalLib.toURI().toURL());
